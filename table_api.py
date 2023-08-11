@@ -16,7 +16,7 @@ def print_table(table_name):
 def create_new_quiz(input_json):
     data = json.load(input_json)
     for k, v in data["Questions"].items():
-        #BUFIX SEE IF EXCEPTION STOPS FUNCTION FROM RUNNING
+        #BUFIX SEE IF EXCEPTION STOPS FUNCTION FROM RUNNINGefefe
         if len(v['Choices']) == 0:
             raise Exception("No options were given for " + k) 
         if not isinstance(v['Answer'], int):
