@@ -1,0 +1,15 @@
+{
+    "name" : "User I/O",
+    "Questions" : {
+        "1" : {
+            "Question": "How do you print in Java?",
+            "Choices": ["System.out.println", "System.print", "print"],
+            "Answer" : 0
+        },
+        "2" : {
+            "Question": "How do you take input in Java?",
+            "Choices": ["With a reader", "With a scanner", "With a writer"],
+            "Answer" : 1
+        }
+    }
+}  
