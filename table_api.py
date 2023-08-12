@@ -13,10 +13,9 @@ def print_table(table_name):
     for item in response['Items']:
         print(item)
 
-def create_new_quiz(input_json):
+def create_new_quiz(input_json, output_json):
     data = json.load(input_json)
     for k, v in data["Questions"].items():
-        #BUFIX SEE IF EXCEPTION STOPS FUNCTION FROM RUNNING
         if len(v['Choices']) == 0:
             raise Exception("No options were given for " + k) 
         if not isinstance(v['Answer'], int):
@@ -42,10 +41,23 @@ def create_new_quiz(input_json):
             }
         )
     out_json = {'quiz_id': quiz_id, 'quiz_name': quiz_name}
-    out_file = open('out.json', 'w')
-    json.dump(out_json, fp=out_file)
-    out_file.close()
+    json.dump(out_json, fp=output_json)
 
-
-create_new_quiz(open('add_quiz_data.json'))
-print_table('Quizzes')
+def get_quizzes(output_json):
+    response = db_client.scan(TableName='Quizzes', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='quiz_id,quiz_name')
+    out_dict = {}
+    for r in response['Items']:
+        out_dict[list(r['quiz_id'].values())[0]] = list(r['quiz_name'].values())[0]
+    while 'LastEvaluatedKey' in response.keys():
+        for r in response['Items']:
+            response = db_client.scan(TableName='Quizzes', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='quiz_id,quiz_name',
+                                      ExclusiveStartKey=response['LastEvaluatedKey'])
+            out_dict[list(r['quiz_id'].values())[0]] = list(r['quiz_name'].values())[0]
+    json.dump(out_dict, fp=output_json)
+    
+output_file = open('out.json', 'w')
+add_quiz_input = open('add_quiz_data.json')
+# create_new_quiz(add_quiz_input, output_file)
+# get_quizzes(output_file)
+output_file.close()
+add_quiz_input.close()
