@@ -8,7 +8,7 @@ db_resource = boto3.resource('dynamodb', aws_access_key_id="anything", aws_secre
                           region_name='us-east-1', endpoint_url="http://localhost:8000")
 db_client = boto3.client("dynamodb", aws_access_key_id="anything", aws_secret_access_key="anything", 
                           region_name='us-east-1', endpoint_url="http://localhost:8000")
-table = db_resource.Table('Quizzes')
+quiz_table = db_resource.Table('Quizzes')
 
 
 def print_table(table_name):
@@ -33,7 +33,7 @@ def create_new_quiz(input_json, output_json):
         answer = int(v['Answer'])
         choices = v['Choices']
         question = v['Question']
-        table.put_item(
+        quiz_table.put_item(
             Item={
                 'quiz_id': quiz_id,
                 'question_number': question_number,
@@ -53,20 +53,25 @@ def get_quizzes(output_json):
     for r in response['Items']:
         out_dict[list(r['quiz_id'].values())[0]] = list(r['quiz_name'].values())[0]
     while 'LastEvaluatedKey' in response.keys():
-        for r in response['Items']:
-            response = db_client.scan(TableName='Quizzes', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='quiz_id,quiz_name',
+        response = db_client.scan(TableName='Quizzes', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='quiz_id,quiz_name',
                                       ExclusiveStartKey=response['LastEvaluatedKey'])
+        for r in response['Items']:
             out_dict[list(r['quiz_id'].values())[0]] = list(r['quiz_name'].values())[0]
     json.dump(out_dict, fp=output_json)
     
     
 def check_quiz(input_json, output_json):
     inp_dict = json.load(input_json)
-    response = table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='answer,question_number', 
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='answer,question_number', 
                                KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']))
     qa_pairs = {}
     for item in response['Items']:
         qa_pairs[int(item['question_number'])] = int(item['answer'])
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='answer,question_number', 
+                               KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']), ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            qa_pairs[int(item['question_number'])] = int(item['answer'])
     tot_answers = len(qa_pairs)
     correct_answers = 0
     wrong_answers = 0
@@ -82,12 +87,46 @@ def check_quiz(input_json, output_json):
     json.dump(out_dict, fp=output_json)
     
     
+def add_choice(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+    key_exp &= Key('question_number').eq(inp_dict['question_number'])
+    curr_list = []
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
+                               KeyConditionExpression=key_exp)
+    for item in response['Items']:
+        for choice in item['choices']:
+            curr_list.append(choice)
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
+                               KeyConditionExpression=key_exp)
+        for item in response['Items']:
+            for choice in item['choices']:
+                curr_list.append(choice)
+    for choice in inp_dict['new_options']:
+        curr_list.append(choice)
+    quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['question_number']},
+                           UpdateExpression='set choices = :qs',
+                           ExpressionAttributeValues={
+                               ":qs": curr_list
+                           })
+    out_dict = {}
+    out_dict['options'] = curr_list
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    out_dict['question_number'] = inp_dict['question_number']
+    json.dump(out_dict, output_json)
+    
+    
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
+add_choice_input = open('add_choice_data.json')
+print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
+# add_choice(add_choice_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
+add_choice_input.close()
