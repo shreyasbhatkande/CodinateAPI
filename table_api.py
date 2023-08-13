@@ -194,6 +194,26 @@ def change_name(input_json, output_json):
     out_dict['old_name'] = old_name
     out_dict['quiz_id'] = inp_dict['quiz_id']
     json.dump(out_dict, output_json)
+
+
+def change_question(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+    key_exp &= Key('question_number').eq(inp_dict['question_number'])
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question', 
+                               KeyConditionExpression=key_exp)
+    old_question = response['Items'][0]['question']
+    quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['question_number']},
+                           UpdateExpression='set question = :q',
+                           ExpressionAttributeValues={
+                               ":q": inp_dict['new_question']
+                           })
+    out_dict = {}
+    out_dict['question'] = inp_dict['new_question']
+    out_dict['old_question'] = old_question
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    out_dict['question_number'] = inp_dict['question_number']
+    json.dump(out_dict, output_json)
     
     
 output_file = open('out.json', 'w')
@@ -203,6 +223,7 @@ add_choice_input = open('add_choice_data.json')
 remove_choice_input = open('remove_choice_data.json')
 change_answer_input = open('change_answer_data.json')
 change_name_input = open('change_name_data.json')
+change_question_input = open('change_question_data.json')
 # print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -210,7 +231,8 @@ change_name_input = open('change_name_data.json')
 # add_choice(add_choice_input, output_file)
 # remove_choice(remove_choice_input, output_file)
 # change_answer(change_answer_input, output_file)
-change_name(change_name_input, output_file)
+# change_name(change_name_input, output_file)
+# change_question(change_question_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -218,3 +240,4 @@ add_choice_input.close()
 remove_choice_input.close()
 change_answer_input.close()
 change_name_input.close()
+change_question_input.close()
