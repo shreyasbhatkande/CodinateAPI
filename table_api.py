@@ -103,6 +103,7 @@ def add_choice(input_json, output_json):
         for item in response['Items']:
             for choice in item['choices']:
                 curr_list.append(choice)
+    old_list = curr_list.copy()
     for choice in inp_dict['new_options']:
         curr_list.append(choice)
     quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['question_number']},
@@ -112,21 +113,58 @@ def add_choice(input_json, output_json):
                            })
     out_dict = {}
     out_dict['options'] = curr_list
+    out_dict['old_options'] = old_list
     out_dict['quiz_id'] = inp_dict['quiz_id']
     out_dict['question_number'] = inp_dict['question_number']
     json.dump(out_dict, output_json)
     
+
+def remove_choice(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+    key_exp &= Key('question_number').eq(inp_dict['question_number'])
+    curr_list = []
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
+                               KeyConditionExpression=key_exp)
+    for item in response['Items']:
+        for choice in item['choices']:
+            curr_list.append(choice)
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
+                               KeyConditionExpression=key_exp)
+        for item in response['Items']:
+            for choice in item['choices']:
+                curr_list.append(choice)
+    new_list = []
+    for c, v in enumerate(curr_list):
+        if c in inp_dict['remove_indexes']:
+            continue
+        new_list.append(v)
+    quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['question_number']},
+                           UpdateExpression='set choices = :qs',
+                           ExpressionAttributeValues={
+                               ":qs": new_list
+                           })
+    out_dict = {}
+    out_dict['options'] = new_list
+    out_dict['old_options'] = curr_list
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    out_dict['question_number'] = inp_dict['question_number']
+    json.dump(out_dict, output_json)
     
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
 add_choice_input = open('add_choice_data.json')
-print_table('Quizzes')
+remove_choice_data = open('remove_choice_data.json')
+# print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
 # add_choice(add_choice_input, output_file)
+# remove_choice(remove_choice_data, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
 add_choice_input.close()
+remove_choice_data.close()
