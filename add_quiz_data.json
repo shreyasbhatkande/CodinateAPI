@@ -1,5 +1,6 @@
 {
     "name" : "User I/O",
+    "description": "This quiz tests your knowledge of user I/O",
     "Questions" : {
         "1" : {
             "Question": "How do you print in Java?",

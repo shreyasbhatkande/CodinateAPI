@@ -26,6 +26,7 @@ def create_new_quiz(input_json, output_json):
         if v['Answer'] >= len(v['Choices']) or v['Answer'] < 0:
             raise Exception("Answer index " + str(v['Answer']) + " out of bounds")
     quiz_name = data['name']
+    desc = data['description']
     quiz_id = str(datetime.datetime.utcnow().hour) + str(datetime.datetime.utcnow().minute) + str(datetime.datetime.utcnow().second) \
     + str(datetime.datetime.utcnow().day) + str(datetime.datetime.utcnow().month) + str(datetime.datetime.utcnow().year)[2:]
     for k, v in data['Questions'].items():
@@ -36,6 +37,7 @@ def create_new_quiz(input_json, output_json):
         quiz_table.put_item(
             Item={
                 'quiz_id': quiz_id,
+                'description': desc,
                 'question_number': question_number,
                 'question': question,
                 'choices': choices,
@@ -216,6 +218,26 @@ def change_question(input_json, output_json):
     json.dump(out_dict, output_json)
     
     
+def change_desc(input_json, output_json):
+    inp_dict = json.load(input_json)
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,description', 
+                               KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']))
+    old_desc = ""
+    for item in response['Items']:
+        old_desc = item['description']
+        key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+        key_exp &= Key('question_number').eq(item['question_number'])
+        quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': item['question_number']},
+                           UpdateExpression='set description = :d',
+                           ExpressionAttributeValues={
+                               ":d": inp_dict['new_desc']
+                           })
+    out_dict = {}
+    out_dict['description'] = inp_dict['new_desc']
+    out_dict['old_description'] = old_desc
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    json.dump(out_dict, output_json)
+    
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
@@ -224,6 +246,7 @@ remove_choice_input = open('remove_choice_data.json')
 change_answer_input = open('change_answer_data.json')
 change_name_input = open('change_name_data.json')
 change_question_input = open('change_question_data.json')
+change_desc_input = open('change_desc_data.json')
 # print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -233,6 +256,7 @@ change_question_input = open('change_question_data.json')
 # change_answer(change_answer_input, output_file)
 # change_name(change_name_input, output_file)
 # change_question(change_question_input, output_file)
+# change_desc(change_desc_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -241,3 +265,4 @@ remove_choice_input.close()
 change_answer_input.close()
 change_name_input.close()
 change_question_input.close()
+change_desc_input.close()
