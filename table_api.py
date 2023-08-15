@@ -9,6 +9,7 @@ db_resource = boto3.resource('dynamodb', aws_access_key_id="anything", aws_secre
 db_client = boto3.client("dynamodb", aws_access_key_id="anything", aws_secret_access_key="anything", 
                           region_name='us-east-1', endpoint_url="http://localhost:8000")
 quiz_table = db_resource.Table('Quizzes')
+interactive_table = db_resource.Table('Interactives')
 
 
 def print_table(table_name):
@@ -300,6 +301,23 @@ def get_question(input_json, output_json):
     json.dump(out_dict, output_json)
     
     
+def create_interactive(input_json, associated_data, output_json):
+    inp_dict = json.load(input_json)
+    interactive_id = str(datetime.datetime.utcnow().hour) + str(datetime.datetime.utcnow().minute) + str(datetime.datetime.utcnow().second) \
+    + str(datetime.datetime.utcnow().day) + str(datetime.datetime.utcnow().month) + str(datetime.datetime.utcnow().year)[2:]
+    interactive_table.put_item(
+        Item={
+            "interactive_id": interactive_id,
+            'url': inp_dict['url'],
+            'name': inp_dict['name'],
+            'description': inp_dict['description'],
+            'associated_data': json.load(associated_data)
+        }
+    )
+    out_dict = {'interactive_id': interactive_id, 'name': inp_dict['name']}
+    json.dump(out_dict, output_json)
+    
+    
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
@@ -311,7 +329,9 @@ change_question_input = open('change_question_data.json')
 change_quiz_desc_input = open('change_quiz_desc_data.json')
 get_quiz_input = open('get_quiz_data.json')
 get_question_input = open("get_question_data.json")
-# print_table('Quizzes')
+create_interactive_input = open('create_interactive_data.json')
+associated_interactive_data = open('associated_interactive_data.json')
+# print_table('Interactives')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
@@ -322,7 +342,8 @@ get_question_input = open("get_question_data.json")
 # change_question(change_question_input, output_file)
 # change_quiz_desc(change_quiz_desc_input, output_file) 
 # get_quiz(get_quiz_input, output_file)
-get_question(get_question_input, output_file)
+# get_question(get_question_input, output_file)
+# create_interactive(create_interactive_input, associated_interactive_data, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -334,3 +355,5 @@ change_question_input.close()
 change_quiz_desc_input.close()
 get_quiz_input.close()
 get_question_input.close()
+create_interactive_input.close()
+associated_interactive_data.close()

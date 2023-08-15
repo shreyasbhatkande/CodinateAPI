@@ -47,7 +47,7 @@ def create_table():
         AttributeDefinitions=[
             {
                 'AttributeName': 'unit_id',
-                'AttributeType': 'N'
+                'AttributeType': 'S'
             },
             {
                 'AttributeName': 'unit_number',
@@ -75,7 +75,7 @@ def create_table():
         AttributeDefinitions=[
             {
                 'AttributeName': 'lesson_id',
-                'AttributeType': 'N'
+                'AttributeType': 'S'
             },
             {
                 'AttributeName': 'lesson_number',
@@ -99,7 +99,7 @@ def create_table():
         AttributeDefinitions=[
             {
                 'AttributeName': 'interactive_id',
-                'AttributeType': 'N'
+                'AttributeType': 'S'
             }
         ],
         ProvisionedThroughput={
@@ -119,7 +119,7 @@ def create_table():
         AttributeDefinitions=[
             {
                 'AttributeName': 'curriculum_id',
-                'AttributeType': 'N'
+                'AttributeType': 'S'
             }
         ],
         ProvisionedThroughput={

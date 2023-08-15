@@ -1,1 +1,1 @@
-{"description": "This quiz tests your knowledge of user I/O", "answer": 0, "question": "How do you print in Java?", "choices": ["System.out.println", "System.print", "print"], "question_number": 1, "quiz_name": "User I/O", "quiz_id": "017415823"}
+{"interactive_id": "1145015823", "name": "example interactive"}
