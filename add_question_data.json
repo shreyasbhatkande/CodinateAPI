@@ -1,0 +1,7 @@
+{
+    "quiz_id": "2345315823",
+    "question_number": 1,
+    "question": "Can you read files for input?",
+    "choices": ["yes", "no"],
+    "answer": 0
+}

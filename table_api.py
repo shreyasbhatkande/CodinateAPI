@@ -429,7 +429,73 @@ def get_interactive(input_json, output_json):
         while 'LastEvaluatedKey' in response.keys():
             response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url,interactive_name,description,associated_data', 
                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
-    json.dump(response['Items'][0], output_file)
+    json.dump(response['Items'][0], output_json)
+    
+    
+def add_question(input_json, output_json):
+    inp_dict = json.load(input_json) 
+    start_index = inp_dict['question_number']
+    if start_index != 0:
+        start_index -= 1
+    key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+    key_exp &= Key('question_number').gte(start_index)
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp)
+    saved_attr = {}
+    out_dict = {'changed_questions': []}
+    if len(response['Items']) > 0:
+        for item in reversed(response['Items']):
+            if int(item['question_number']) < inp_dict['question_number']:
+                continue
+            quiz_table.put_item(
+            Item={
+                'quiz_id': inp_dict['quiz_id'],
+                'description': item['description'],
+                'question_number': int(item['question_number']) + 1,
+                'question': item['question'],
+                'choices': item['choices'],
+                'answer': item['answer'],
+                'quiz_name': item['quiz_name']
+            }
+            )
+            out_dict['changed_questions'].append(int(item['question_number']))
+            saved_attr['description'] = item['description']
+            saved_attr['quiz_name'] = item['quiz_name']
+            quiz_table.delete_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': item['question_number']})
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+        if len(response['Items']) > 0:
+            for item in reversed(response['Items']):
+                if int(item['question_number']) < inp_dict['question_number']:
+                    continue
+                quiz_table.put_item(
+                Item={
+                    'quiz_id': inp_dict['quiz_id'],
+                    'description': item['description'],
+                    'question_number': int(item['question_number']) + 1,
+                    'question': item['question'],
+                    'choices': item['choices'],
+                    'answer': item['answer'],
+                    'quiz_name': item['quiz_name']
+                }
+                )
+                out_dict['changed_questions'].append(int(item['question_number']))
+                quiz_table.delete_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': item['question_number']})
+    quiz_table.put_item(
+        Item={
+            'quiz_id': inp_dict['quiz_id'],
+            'description': saved_attr['description'],
+            'question_number': inp_dict['question_number'],
+            'question': inp_dict['question'],
+            'choices': inp_dict['choices'],
+            'answer': inp_dict['answer'],
+            'quiz_name': saved_attr['quiz_name']
+        }   
+    )
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    json.dump(out_dict, output_json)
+    
     
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -450,7 +516,8 @@ change_interactive_description_input = open('change_interactive_description_data
 change_interactive_json_input = open('change_interactive_json_data.json')
 new_interactive_json = open('new_interactive_json_data.json')
 get_interactive_input = open('get_interactive_data.json')
-# print_table('Interactives')
+add_question_input = open('add_question_data.json')
+print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
@@ -469,6 +536,7 @@ get_interactive_input = open('get_interactive_data.json')
 # change_interactive_description(change_interactive_description_input, output_file)
 # change_interactive_json(change_interactive_json_input, new_interactive_json, output_file)
 # get_interactive(get_interactive_input, output_file)
+# add_question(add_question_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -488,3 +556,4 @@ change_interactive_description_input.close()
 change_interactive_json_input.close()
 new_interactive_json.close()
 get_interactive_input.close()
+add_question_input.close()
