@@ -375,6 +375,52 @@ def change_interactive_name(input_json, output_json):
     json.dump(out_dict, output_json)
     
     
+def change_interactive_description(input_json, output_json):
+    inp_dict = json.load(input_json)    
+    key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
+    response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_description = response['Items'][0]['description']
+    interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
+                           UpdateExpression='set description = :u',
+                           ExpressionAttributeValues={
+                               ":u": inp_dict['new_description']
+                           })
+    out_dict = {}
+    out_dict['description'] = inp_dict['new_description']
+    out_dict['old_description'] = old_description
+    out_dict['interactive_id'] = inp_dict['interactive_id']
+    json.dump(out_dict, output_json)
+    
+    
+def change_interactive_json(input_file, new_json, output_json):
+    inp_dict = json.load(input_file)
+    key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
+    new_json = json.load(new_json)
+    response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='associated_data', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='associated_data', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_data = response['Items'][0]['associated_data']
+    interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
+                           UpdateExpression='set associated_data = :u',
+                           ExpressionAttributeValues={
+                               ":u": new_json
+                           })
+    out_dict = {}
+    out_dict['interactive_id'] = inp_dict['interactive_id']
+    out_dict['old_data'] = old_data
+    out_dict['new_data'] = new_json
+    json.dump(out_dict, output_json)
+    
+    
+    
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
@@ -389,7 +435,10 @@ get_question_input = open("get_question_data.json")
 create_interactive_input = open('create_interactive_data.json')
 associated_interactive_data = open('associated_interactive_data.json')
 change_url_input = open('change_url_data.json')
-change_interactive_name_input = open('change_interactive_name.json')
+change_interactive_name_input = open('change_interactive_name_data.json')
+change_interactive_description_input = open('change_interactive_description_data.json')
+change_interactive_json_input = open('change_interactive_json_data.json')
+new_interactive_json = open('new_interactive_json_data.json')
 # print_table('Interactives')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -406,6 +455,8 @@ change_interactive_name_input = open('change_interactive_name.json')
 # get_all_interactives(output_file)
 # change_url(change_url_input, output_file)
 # change_interactive_name(change_interactive_name_input, output_file)
+# change_interactive_description(change_interactive_description_input, output_file)
+change_interactive_json(change_interactive_json_input, new_interactive_json, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -421,3 +472,6 @@ create_interactive_input.close()
 associated_interactive_data.close()
 change_url_input.close()
 change_interactive_name_input.close()
+change_interactive_description_input.close()
+change_interactive_json_input.close()
+new_interactive_json.close()
