@@ -156,11 +156,11 @@ def change_answer(input_json, output_json):
     key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
     key_exp &= Key('question_number').eq(inp_dict['question_number'])
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices,answer', 
-                               KeyConditionExpression=key_exp, Limit=1)
+                               KeyConditionExpression=key_exp)
     if not len(response['Items']) > 0:
         while 'LastEvaluatedKey' in response.keys():
             response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices,answer', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'], Limit=1)
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_answer = int(response['Items'][0]['answer'])
         
     if inp_dict['new_answer'] < 0 or inp_dict['new_answer'] >= len(response['Items'][0]['choices']):
@@ -178,7 +178,7 @@ def change_answer(input_json, output_json):
     json.dump(out_dict, output_json)
     
     
-def change_name(input_json, output_json):
+def change_quiz_name(input_json, output_json):
     inp_dict = json.load(input_json)
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,quiz_name', 
                                KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']))
@@ -234,7 +234,7 @@ def change_question(input_json, output_json):
     json.dump(out_dict, output_json)
     
     
-def change_desc(input_json, output_json):
+def change_quiz_desc(input_json, output_json):
     inp_dict = json.load(input_json)
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,description', 
                                KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']))
@@ -282,6 +282,23 @@ def get_quiz(input_json, output_json):
                                                 'quiz_name':item['quiz_name']}
     json.dump(out_dict, output_json)
         
+        
+def get_question(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+    key_exp &= Key('question_number').eq(inp_dict['question_number'])
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,question_number,question,choices,quiz_name,answer', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,question,choices,quiz_name,answer', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    out_dict = response['Items'][0].copy()
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    out_dict['question_number'] = int(inp_dict['question_number'])
+    out_dict['answer'] = int(response['Items'][0]['answer'])
+    json.dump(out_dict, output_json)
+    
     
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -289,10 +306,11 @@ check_quiz_input = open('check_quiz_data.json')
 add_choice_input = open('add_choice_data.json')
 remove_choice_input = open('remove_choice_data.json')
 change_answer_input = open('change_answer_data.json')
-change_name_input = open('change_name_data.json')
+change_quiz_name_input = open('change_quiz_name_data.json')
 change_question_input = open('change_question_data.json')
-change_desc_input = open('change_desc_data.json')
+change_quiz_desc_input = open('change_quiz_desc_data.json')
 get_quiz_input = open('get_quiz_data.json')
+get_question_input = open("get_question_data.json")
 # print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -300,17 +318,19 @@ get_quiz_input = open('get_quiz_data.json')
 # add_choice(add_choice_input, output_file)
 # remove_choice(remove_choice_input, output_file)
 # change_answer(change_answer_input, output_file)
-# change_name(change_name_input, output_file) 
+# change_quiz_name(change_quiz_name_input, output_file) 
 # change_question(change_question_input, output_file)
-# change_desc(change_desc_input, output_file) 
-get_quiz(get_quiz_input, output_file)
+# change_quiz_desc(change_quiz_desc_input, output_file) 
+# get_quiz(get_quiz_input, output_file)
+get_question(get_question_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
 add_choice_input.close()
 remove_choice_input.close()
 change_answer_input.close()
-change_name_input.close()
+change_quiz_name_input.close()
 change_question_input.close()
-change_desc_input.close()
+change_quiz_desc_input.close()
 get_quiz_input.close()
+get_question_input.close()
