@@ -420,6 +420,16 @@ def change_interactive_json(input_file, new_json, output_json):
     json.dump(out_dict, output_json)
     
     
+def get_interactive(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
+    response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url,interactive_name,description,associated_data', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url,interactive_name,description,associated_data', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    json.dump(response['Items'][0], output_file)
     
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -439,6 +449,7 @@ change_interactive_name_input = open('change_interactive_name_data.json')
 change_interactive_description_input = open('change_interactive_description_data.json')
 change_interactive_json_input = open('change_interactive_json_data.json')
 new_interactive_json = open('new_interactive_json_data.json')
+get_interactive_input = open('get_interactive_data.json')
 # print_table('Interactives')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -456,7 +467,8 @@ new_interactive_json = open('new_interactive_json_data.json')
 # change_url(change_url_input, output_file)
 # change_interactive_name(change_interactive_name_input, output_file)
 # change_interactive_description(change_interactive_description_input, output_file)
-change_interactive_json(change_interactive_json_input, new_interactive_json, output_file)
+# change_interactive_json(change_interactive_json_input, new_interactive_json, output_file)
+# get_interactive(get_interactive_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -475,3 +487,4 @@ change_interactive_name_input.close()
 change_interactive_description_input.close()
 change_interactive_json_input.close()
 new_interactive_json.close()
+get_interactive_input.close()
