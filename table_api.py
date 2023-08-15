@@ -96,15 +96,13 @@ def add_choice(input_json, output_json):
     curr_list = []
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
                                KeyConditionExpression=key_exp)
+    if not (len(response['Items']) > 0):
+        while 'LastEvaluatedKey' in response.keys():
+            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     for item in response['Items']:
         for choice in item['choices']:
             curr_list.append(choice)
-    while 'LastEvaluatedKey' in response.keys():
-        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
-                               KeyConditionExpression=key_exp)
-        for item in response['Items']:
-            for choice in item['choices']:
-                curr_list.append(choice)
     old_list = curr_list.copy()
     for choice in inp_dict['new_options']:
         curr_list.append(choice)
@@ -128,13 +126,11 @@ def remove_choice(input_json, output_json):
     curr_list = []
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
                                KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     for item in response['Items']:
-        for choice in item['choices']:
-            curr_list.append(choice)
-    while 'LastEvaluatedKey' in response.keys():
-        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
-                               KeyConditionExpression=key_exp)
-        for item in response['Items']:
             for choice in item['choices']:
                 curr_list.append(choice)
     new_list = []
@@ -160,8 +156,13 @@ def change_answer(input_json, output_json):
     key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
     key_exp &= Key('question_number').eq(inp_dict['question_number'])
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices,answer', 
-                               KeyConditionExpression=key_exp)
+                               KeyConditionExpression=key_exp, Limit=1)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices,answer', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'], Limit=1)
     old_answer = int(response['Items'][0]['answer'])
+        
     if inp_dict['new_answer'] < 0 or inp_dict['new_answer'] >= len(response['Items'][0]['choices']):
         raise Exception("Answer index " + str(inp_dict['new_answer']) + " out of bounds")
     quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['question_number']},
@@ -191,6 +192,17 @@ def change_name(input_json, output_json):
                            ExpressionAttributeValues={
                                ":n": inp_dict['new_name']
                            })
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,quiz_name', 
+                               KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']), ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+            key_exp &= Key('question_number').eq(item['question_number'])
+            quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': item['question_number']},
+                            UpdateExpression='set quiz_name = :n',
+                            ExpressionAttributeValues={
+                                ":n": inp_dict['new_name']
+                            })
     out_dict = {}
     out_dict['name'] = inp_dict['new_name']
     out_dict['old_name'] = old_name
@@ -204,6 +216,10 @@ def change_question(input_json, output_json):
     key_exp &= Key('question_number').eq(inp_dict['question_number'])
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question', 
                                KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_question = response['Items'][0]['question']
     quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['question_number']},
                            UpdateExpression='set question = :q',
@@ -232,6 +248,17 @@ def change_desc(input_json, output_json):
                            ExpressionAttributeValues={
                                ":d": inp_dict['new_desc']
                            })
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,description', 
+                               KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']), ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+            key_exp &= Key('question_number').eq(item['question_number'])
+            quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': item['question_number']},
+                            UpdateExpression='set description = :d',
+                            ExpressionAttributeValues={
+                                ":d": inp_dict['new_desc']
+                            })
     out_dict = {}
     out_dict['description'] = inp_dict['new_desc']
     out_dict['old_description'] = old_desc
@@ -254,9 +281,9 @@ change_desc_input = open('change_desc_data.json')
 # add_choice(add_choice_input, output_file)
 # remove_choice(remove_choice_input, output_file)
 # change_answer(change_answer_input, output_file)
-# change_name(change_name_input, output_file)
+# change_name(change_name_input, output_file) 
 # change_question(change_question_input, output_file)
-# change_desc(change_desc_input, output_file)
+change_desc(change_desc_input, output_file) 
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
