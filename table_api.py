@@ -308,7 +308,7 @@ def create_interactive(input_json, associated_data, output_json):
     interactive_table.put_item(
         Item={
             "interactive_id": interactive_id,
-            'url': inp_dict['url'],
+            'interactive_url': inp_dict['url'],
             'interactive_name': inp_dict['name'],
             'description': inp_dict['description'],
             'associated_data': json.load(associated_data)
@@ -329,6 +329,28 @@ def get_all_interactives(output_json):
         for item in response['Items']:
             out_dict[item['interactive_id']['S']] = item['interactive_name']['S']
     json.dump(out_dict, fp=output_json)
+        
+
+def change_url(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
+    response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_url = response['Items'][0]['interactive_url']
+    interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
+                           UpdateExpression='set interactive_url = :u',
+                           ExpressionAttributeValues={
+                               ":u": inp_dict['new_url']
+                           })
+    out_dict = {}
+    out_dict['url'] = inp_dict['new_url']
+    out_dict['old_url'] = old_url
+    out_dict['interactive_id'] = inp_dict['interactive_id']
+    json.dump(out_dict, output_json)
     
     
 output_file = open('out.json', 'w')
@@ -344,6 +366,7 @@ get_quiz_input = open('get_quiz_data.json')
 get_question_input = open("get_question_data.json")
 create_interactive_input = open('create_interactive_data.json')
 associated_interactive_data = open('associated_interactive_data.json')
+change_url_input = open('change_url_data.json')
 # print_table('Interactives')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -357,7 +380,8 @@ associated_interactive_data = open('associated_interactive_data.json')
 # get_quiz(get_quiz_input, output_file)
 # get_question(get_question_input, output_file)
 # create_interactive(create_interactive_input, associated_interactive_data, output_file)
-get_all_interactives(output_file)
+# get_all_interactives(output_file)
+# change_url(change_url_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -371,3 +395,4 @@ get_quiz_input.close()
 get_question_input.close()
 create_interactive_input.close()
 associated_interactive_data.close()
+change_url_input.close()
