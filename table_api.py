@@ -352,6 +352,28 @@ def change_url(input_json, output_json):
     out_dict['interactive_id'] = inp_dict['interactive_id']
     json.dump(out_dict, output_json)
     
+
+def change_interactive_name(input_json, output_json):
+    inp_dict = json.load(input_json)    
+    key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
+    response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_name', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_name', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_name = response['Items'][0]['interactive_name']
+    interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
+                           UpdateExpression='set interactive_name = :u',
+                           ExpressionAttributeValues={
+                               ":u": inp_dict['new_name']
+                           })
+    out_dict = {}
+    out_dict['name'] = inp_dict['new_name']
+    out_dict['old_name'] = old_name
+    out_dict['interactive_id'] = inp_dict['interactive_id']
+    json.dump(out_dict, output_json)
+    
     
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -367,6 +389,7 @@ get_question_input = open("get_question_data.json")
 create_interactive_input = open('create_interactive_data.json')
 associated_interactive_data = open('associated_interactive_data.json')
 change_url_input = open('change_url_data.json')
+change_interactive_name_input = open('change_interactive_name.json')
 # print_table('Interactives')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -382,6 +405,7 @@ change_url_input = open('change_url_data.json')
 # create_interactive(create_interactive_input, associated_interactive_data, output_file)
 # get_all_interactives(output_file)
 # change_url(change_url_input, output_file)
+# change_interactive_name(change_interactive_name_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -396,3 +420,4 @@ get_question_input.close()
 create_interactive_input.close()
 associated_interactive_data.close()
 change_url_input.close()
+change_interactive_name_input.close()
