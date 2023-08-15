@@ -265,6 +265,24 @@ def change_desc(input_json, output_json):
     out_dict['quiz_id'] = inp_dict['quiz_id']
     json.dump(out_dict, output_json)
     
+    
+def get_quiz(input_json, output_json):
+    inp_dict = json.load(input_json)
+    out_dict = {}
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,question_number,question,choices,quiz_name', 
+                               KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']))
+    for item in response['Items']:
+        out_dict[int(item['question_number'])] = {'description':item['description'], 'question':item['question'], 'choices':item['choices'],
+                                            'quiz_name':item['quiz_name']}
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,question_number,question,choices,quiz_name', 
+                               KeyConditionExpression=Key('quiz_id').eq(inp_dict['quiz_id']), ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            out_dict[int(item['question_number'])] = {'description':item['description'], 'question':item['question'], 'choices':item['choices'],
+                                                'quiz_name':item['quiz_name']}
+    json.dump(out_dict, output_json)
+        
+    
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
@@ -274,6 +292,7 @@ change_answer_input = open('change_answer_data.json')
 change_name_input = open('change_name_data.json')
 change_question_input = open('change_question_data.json')
 change_desc_input = open('change_desc_data.json')
+get_quiz_input = open('get_quiz_data.json')
 # print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -283,7 +302,8 @@ change_desc_input = open('change_desc_data.json')
 # change_answer(change_answer_input, output_file)
 # change_name(change_name_input, output_file) 
 # change_question(change_question_input, output_file)
-change_desc(change_desc_input, output_file) 
+# change_desc(change_desc_input, output_file) 
+get_quiz(get_quiz_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -293,3 +313,4 @@ change_answer_input.close()
 change_name_input.close()
 change_question_input.close()
 change_desc_input.close()
+get_quiz_input.close()
