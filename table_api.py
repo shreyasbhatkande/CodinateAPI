@@ -309,13 +309,26 @@ def create_interactive(input_json, associated_data, output_json):
         Item={
             "interactive_id": interactive_id,
             'url': inp_dict['url'],
-            'name': inp_dict['name'],
+            'interactive_name': inp_dict['name'],
             'description': inp_dict['description'],
             'associated_data': json.load(associated_data)
         }
     )
     out_dict = {'interactive_id': interactive_id, 'name': inp_dict['name']}
     json.dump(out_dict, output_json)
+    
+    
+def get_all_interactives(output_json):
+    response = db_client.scan(TableName='Interactives', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='interactive_id,interactive_name')
+    out_dict = {}
+    for item in response['Items']:
+        out_dict[item['interactive_id']['S']] = item['interactive_name']['S']
+    while 'LastEvaluatedKey' in response.keys():
+        response = db_client.scan(TableName='Interactives', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='interactive_id,interactive_name',
+                                  ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            out_dict[item['interactive_id']['S']] = item['interactive_name']['S']
+    json.dump(out_dict, fp=output_json)
     
     
 output_file = open('out.json', 'w')
@@ -344,6 +357,7 @@ associated_interactive_data = open('associated_interactive_data.json')
 # get_quiz(get_quiz_input, output_file)
 # get_question(get_question_input, output_file)
 # create_interactive(create_interactive_input, associated_interactive_data, output_file)
+get_all_interactives(output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
