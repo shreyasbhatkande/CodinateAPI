@@ -549,6 +549,98 @@ def remove_question(input_json, output_json):
     out_dict['removed_question'] = removed_question
     json.dump(out_dict, output_json)
     
+    
+def change_question_order(input_json, output_json):
+    inp_dict = json.load(input_json)
+    original_pos = inp_dict['question_number']
+    new_pos = inp_dict['new_pos']
+    if original_pos == new_pos:
+        raise Exception('Both positions given are the same')
+    k2 = Key('quiz_id').eq(inp_dict['quiz_id'])
+    k2 &= Key('question_number').eq(original_pos)
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=k2)
+    while len(response['Items']) == 0:
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=k2, ExclusiveStartKey=response['LastEvaluatedKey'])
+    removed_question = response['Items'][0]
+    removed_question['quiz_id'] = inp_dict['quiz_id']
+    removed_question['question_number'] = new_pos
+    out_dict = {'changed_indexes': []}
+    quiz_table.delete_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': original_pos})
+    if original_pos > new_pos:
+        key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+        key_exp &= Key('question_number').between(new_pos, original_pos - 1)    
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp)
+        for item in reversed(response['Items']):
+            quiz_table.put_item(
+                Item={
+                    'quiz_id': inp_dict['quiz_id'],
+                    'description': item['description'],
+                    'question_number': int(item['question_number']) + 1,
+                    'question': item['question'],
+                    'choices': item['choices'],
+                    'answer': item['answer'],
+                    'quiz_name': item['quiz_name']
+                }
+            )
+            out_dict['changed_indexes'].append(int(item['question_number']))
+        while 'LastEvaluatedKey' in response.keys():
+            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+            for item in reversed(response['Items']):
+                quiz_table.put_item(
+                    Item={
+                        'quiz_id': inp_dict['quiz_id'],
+                        'description': item['description'],
+                        'question_number': int(item['question_number']) + 1,
+                        'question': item['question'],
+                        'choices': item['choices'],
+                        'answer': item['answer'],
+                        'quiz_name': item['quiz_name']
+                    }
+                )
+                out_dict['changed_indexes'].append(int(item['question_number']))
+    else:
+        key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+        key_exp &= Key('question_number').between(original_pos + 1, new_pos)    
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp)
+        for item in response['Items']:
+            quiz_table.put_item(
+                Item={
+                    'quiz_id': inp_dict['quiz_id'],
+                    'description': item['description'],
+                    'question_number': int(item['question_number']) - 1,
+                    'question': item['question'],
+                    'choices': item['choices'],
+                    'answer': item['answer'],
+                    'quiz_name': item['quiz_name']
+                }
+            )
+            out_dict['changed_indexes'].append(int(item['question_number']))
+        while 'LastEvaluatedKey' in response.keys():
+            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+            for item in response['Items']:
+                quiz_table.put_item(
+                    Item={
+                        'quiz_id': inp_dict['quiz_id'],
+                        'description': item['description'],
+                        'question_number': int(item['question_number']) - 1,
+                        'question': item['question'],
+                        'choices': item['choices'],
+                        'answer': item['answer'],
+                        'quiz_name': item['quiz_name']
+                    }
+                )
+                out_dict['changed_indexes'].append(int(item['question_number']))
+    quiz_table.put_item(
+        Item=removed_question
+    )    
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    json.dump(out_dict, output_json)
         
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -571,7 +663,8 @@ new_interactive_json = open('new_interactive_json_data.json')
 get_interactive_input = open('get_interactive_data.json')
 add_question_input = open('add_question_data.json')
 remove_question_input = open('remove_question_data.json')
-# print_table('Quizzes')
+change_question_order_input = open('change_question_order_data.json')
+print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
@@ -592,6 +685,7 @@ remove_question_input = open('remove_question_data.json')
 # get_interactive(get_interactive_input, output_file)
 # add_question(add_question_input, output_file)
 # remove_question(remove_question_input, output_file)
+# change_question_order(change_question_order_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -613,3 +707,4 @@ new_interactive_json.close()
 get_interactive_input.close()
 add_question_input.close()
 remove_question_input.close()
+change_question_order_input.close()
