@@ -497,6 +497,59 @@ def add_question(input_json, output_json):
     json.dump(out_dict, output_json)
     
     
+def remove_question(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('quiz_id').eq(inp_dict['quiz_id'])
+    key_exp &= Key('question_number').gt(inp_dict['remove_num'])
+    k2 = Key('quiz_id').eq(inp_dict['quiz_id'])
+    k2 &= Key('question_number').eq(inp_dict['remove_num'])
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question,answer,choices', 
+                               KeyConditionExpression=k2)
+    while len(response['Items']) == 0:
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question,answer,choices', 
+                               KeyConditionExpression=k2, ExclusiveStartKey=response['LastEvaluatedKey'])
+    removed_question = response['Items'][0]
+    removed_question['answer'] = int(removed_question['answer'])
+    quiz_table.delete_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['remove_num']})
+    response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp)
+    out_dict = {'changed_questions':[]}
+    for item in response['Items']:
+        quiz_table.put_item(
+        Item={
+            'quiz_id': inp_dict['quiz_id'],
+            'description': item['description'],
+            'question_number': int(item['question_number']) - 1,
+            'question': item['question'],
+            'choices': item['choices'],
+            'answer': item['answer'],
+            'quiz_name': item['quiz_name']
+            }
+        )
+        out_dict['changed_questions'].append(int(item['question_number']))
+        quiz_table.delete_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': item['question_number']})
+    while 'LastEvaluatedKey' in response.keys():
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question_number,question,answer,choices,description,quiz_name', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            quiz_table.put_item(
+                Item={
+                    'quiz_id': inp_dict['quiz_id'],
+                    'description': item['description'],
+                    'question_number': int(item['question_number']) - 1,
+                    'question': item['question'],
+                    'choices': item['choices'],
+                    'answer': item['answer'],
+                    'quiz_name': item['quiz_name']
+                }
+            )
+            out_dict['changed_questions'].append(int(item['question_number']))
+            quiz_table.delete_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': item['question_number']})
+    out_dict['quiz_id'] = inp_dict['quiz_id']
+    out_dict['removed_question'] = removed_question
+    json.dump(out_dict, output_json)
+    
+        
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
@@ -517,7 +570,8 @@ change_interactive_json_input = open('change_interactive_json_data.json')
 new_interactive_json = open('new_interactive_json_data.json')
 get_interactive_input = open('get_interactive_data.json')
 add_question_input = open('add_question_data.json')
-print_table('Quizzes')
+remove_question_input = open('remove_question_data.json')
+# print_table('Quizzes')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
@@ -537,6 +591,7 @@ print_table('Quizzes')
 # change_interactive_json(change_interactive_json_input, new_interactive_json, output_file)
 # get_interactive(get_interactive_input, output_file)
 # add_question(add_question_input, output_file)
+# remove_question(remove_question_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -557,3 +612,4 @@ change_interactive_json_input.close()
 new_interactive_json.close()
 get_interactive_input.close()
 add_question_input.close()
+remove_question_input.close()
