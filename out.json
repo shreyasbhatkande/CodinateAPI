@@ -1,1 +1,9 @@
-{"image": "new image", "old_image": "new image", "curriculum_id": "2585317823"}
+{
+    "image": "new image",
+    "description": "new description",
+    "curriculum_name": "new name",
+    "units": [
+        0,
+        1
+    ]
+}

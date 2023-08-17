@@ -771,7 +771,36 @@ def change_image(input_json, output_json):
     out_dict['old_image'] = old_img
     out_dict['curriculum_id'] = inp_dict['curriculum_id']
     json.dump(out_dict, output_json)
-       
+    
+    
+def get_curriculum(input_json, output_json):
+    inp_dict = json.load(input_json)
+    out_dict = {}
+    key_exp = Key('curriculum_id').eq(inp_dict['curriculum_id'])
+    unit_exp = Key('unit_id').eq(inp_dict['curriculum_id'])
+    response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image,description,curriculum_name', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image,description,curriculum_name', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    response = response['Items'][0]
+    out_dict['image'] = response['image']
+    out_dict['description'] = response['description']
+    out_dict['curriculum_name'] = response['curriculum_name']
+    response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='unit_number', 
+                               KeyConditionExpression=unit_exp)
+    units = []
+    for item in response['Items']:
+        units.append(int(item['unit_number']))
+    while 'LastEvaluatedKey' in response.keys():
+        response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='unit_number', 
+                               KeyConditionExpression=unit_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            units.append(int(item['unit_number']))
+    out_dict['units'] = units
+    json.dump(out_dict, output_json)
+    
         
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -799,6 +828,7 @@ create_curriculum_input = open('create_curriculum_data.json')
 change_curriculum_name_input = open('change_curriculum_name_data.json')
 change_curriculum_description_input = open('change_curriculum_description_data.json')
 change_image_input = open('change_image_data.json')
+get_curriculum_input = open('get_curriculum_data.json')
 # print_table('Curriculums')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -826,6 +856,7 @@ change_image_input = open('change_image_data.json')
 # change_curriculum_name(change_curriculum_name_input, output_file)
 # change_curriculum_description(change_curriculum_description_input, output_file)
 # change_image(change_image_input, output_file)
+get_curriculum(get_curriculum_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -852,3 +883,4 @@ create_curriculum_input.close()
 change_curriculum_name_input.close()
 change_curriculum_description_input.close()
 change_image_input.close()
+get_curriculum_input.close()
