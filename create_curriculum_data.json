@@ -1,0 +1,49 @@
+{
+    "curriculum_elements": [
+        {
+            "name": "Intro To Arrays",
+            "videoLink": "https://www.youtube.com/",
+            "lessonDescription": "{\"type\":\"coding\"}",
+            "lessonOrderNum": 0,
+            "unitOrderNum": 0,
+            "unit": "Unit 1",
+            "lesson_id": "l-1",
+            "unit_description": "Learn about arrays"
+        },
+        {
+            "name": "Array Traversal",
+            "videoLink": "google.com",
+            "lessonDescription": "{\"type\":\"coding\"}",
+            "lessonOrderNum": 1,
+            "unitOrderNum": 0,
+            "unit": "Unit 1",
+            "lesson_id": "HY6bCIthhonzVeSQhfpJcH",
+            "unit_description": "Learn about arrays"
+        },
+        {
+            "name": "Intro to Algorithms",
+            "videoLink": "https://www.youtube2.com/",
+            "lessonDescription": "{\"type\":\"coding\"}",
+            "lessonOrderNum": 0,
+            "unitOrderNum": 1,
+            "unit": "Unit 2",
+            "lesson_id": "QuZOWboT6y13M0qQeCNOwy",
+            "unit_description": "Learn about algorithms"
+        },
+        {
+            "name": "O(n) Algorithms",
+            "videoLink": "google2.com",
+            "lessonDescription": "{\"type\":\"coding\"}",
+            "lessonOrderNum": 1,
+            "unitOrderNum": 1,
+            "unit": "Unit 2",
+            "lesson_id": "xPZQ71Do4qJmoYfWWItFJa",
+            "unit_description": "Learn about arrays"
+        }
+    ],
+    "curriculum_info": {
+        "name": "Curriculum Name 2",
+        "description": "Curriculum Description",
+        "image": ""
+    }
+}

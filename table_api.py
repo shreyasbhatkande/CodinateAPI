@@ -10,7 +10,9 @@ db_client = boto3.client("dynamodb", aws_access_key_id="anything", aws_secret_ac
                           region_name='us-east-1', endpoint_url="http://localhost:8000")
 quiz_table = db_resource.Table('Quizzes')
 interactive_table = db_resource.Table('Interactives')
-
+curriculum_table = db_resource.Table("Curriculums")
+lesson_table = db_resource.Table('Lessons')
+unit_table = db_resource.Table('Units')
 
 def print_table(table_name):
     response = db_client.scan(TableName=table_name)
@@ -642,6 +644,56 @@ def change_question_order(input_json, output_json):
     out_dict['quiz_id'] = inp_dict['quiz_id']
     json.dump(out_dict, output_json)
         
+        
+def create_curriculum(input_json, output_json):
+    inp_dict = json.load(input_json)
+    out_dict = {}
+    out_dict['unit_pairings'] = {}
+    out_dict['lesson_pairings'] = {}
+    unit_name_id = {}
+    curriculum_id =  str(datetime.datetime.utcnow().hour) + str(datetime.datetime.utcnow().minute) + str(datetime.datetime.utcnow().second) \
+    + str(datetime.datetime.utcnow().day) + str(datetime.datetime.utcnow().month) + str(datetime.datetime.utcnow().year)[2:]
+    out_dict['curriculum_id'] = curriculum_id
+    curriculum_table.put_item(
+        Item={
+            'curriculum_id': curriculum_id,
+            'description': inp_dict['curriculum_info']['description'],
+            'curriculum_name': inp_dict['curriculum_info']['name'],
+            'image': inp_dict['curriculum_info']['image'],
+        }
+    )
+    for lesson in inp_dict['curriculum_elements']:
+        if lesson['unit'] not in unit_name_id:
+            unit_name_id[lesson["unit"]] = {}
+            unit_name_id[lesson["unit"]]['id'] = curriculum_id
+        unit_name_id[lesson['unit']]['description'] = lesson['unit_description']
+        unit_name_id[lesson['unit']]['unit_num'] = lesson['unitOrderNum']
+        out_dict['lesson_pairings'][lesson['name']] = unit_name_id[lesson['unit']]['id']
+        lesson_table.put_item(
+            Item={
+                'lesson_id': curriculum_id,
+                'lesson_number': lesson['lessonOrderNum'],
+                'video': lesson['videoLink'],
+                'lesson_name': lesson['name'],
+                'lesson_desc': lesson['lessonDescription'],
+                'quizzes': [],
+                'interactives': [],
+            }
+        )
+    for k, v in unit_name_id.items():
+        out_dict['unit_pairings'][k] = v['id']
+        unit_table.put_item(
+            Item={
+                'unit_id': v['id'],
+                'unit_number': v['unit_num'],
+                'description': v['description'],
+                'unit_name': k,
+                'quizzes': [],
+            }
+        )
+    json.dump(out_dict, output_json)
+    
+        
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
@@ -664,7 +716,8 @@ get_interactive_input = open('get_interactive_data.json')
 add_question_input = open('add_question_data.json')
 remove_question_input = open('remove_question_data.json')
 change_question_order_input = open('change_question_order_data.json')
-print_table('Quizzes')
+create_curriculum_input = open('create_curriculum_data.json')
+# print_table('Units')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
@@ -686,6 +739,7 @@ print_table('Quizzes')
 # add_question(add_question_input, output_file)
 # remove_question(remove_question_input, output_file)
 # change_question_order(change_question_order_input, output_file)
+# create_curriculum(create_curriculum_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -708,3 +762,4 @@ get_interactive_input.close()
 add_question_input.close()
 remove_question_input.close()
 change_question_order_input.close()
+create_curriculum_input.close()
