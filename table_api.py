@@ -693,6 +693,85 @@ def create_curriculum(input_json, output_json):
         )
     json.dump(out_dict, output_json)
     
+    
+def get_all_curriculums(output_json):
+    response = db_client.scan(TableName='Curriculums', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='curriculum_name,curriculum_id')
+    out_dict = {}
+    for r in response['Items']:
+        out_dict[r['curriculum_id']['S']] = r['curriculum_name']['S']
+    while 'LastEvaluatedKey' in response.keys():
+        response = db_client.scan(TableName='Curriculums', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='curriculum_name,curriculum_id', 
+                                  ExclusiveStartKey=response['LastEvaluatedKey'])
+        for r in response['Items']:
+            out_dict[r['curriculum_id']['S']] = r['curriculum_name']['S']
+    json.dump(out_dict, fp=output_json)
+    
+    
+def change_curriculum_name(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('curriculum_id').eq(inp_dict['curriculum_id'])
+    response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='curriculum_name', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='curriculum_name', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_name = response['Items'][0]['curriculum_name']
+    curriculum_table.update_item(Key={'curriculum_id': inp_dict['curriculum_id']},
+                           UpdateExpression='set curriculum_name = :c',
+                           ExpressionAttributeValues={
+                               ":c": inp_dict['new_name']
+                           })
+    out_dict = {}
+    out_dict['name'] = inp_dict['new_name']
+    out_dict['old_name'] = old_name
+    out_dict['curriculum_id'] = inp_dict['curriculum_id']
+    json.dump(out_dict, output_json)
+    
+    
+def change_curriculum_description(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('curriculum_id').eq(inp_dict['curriculum_id'])
+    response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_desc = response['Items'][0]['description']
+    curriculum_table.update_item(Key={'curriculum_id': inp_dict['curriculum_id']},
+                           UpdateExpression='set description = :c',
+                           ExpressionAttributeValues={
+                               ":c": inp_dict['new_description']
+                           })
+    out_dict = {}
+    out_dict['description'] = inp_dict['new_description']
+    out_dict['old_desc'] = old_desc
+    out_dict['curriculum_id'] = inp_dict['curriculum_id']
+    json.dump(out_dict, output_json)
+       
+       
+def change_image(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('curriculum_id').eq(inp_dict['curriculum_id'])
+    response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image', 
+                               KeyConditionExpression=key_exp)
+    if not len(response['Items']) > 0:
+        while 'LastEvaluatedKey' in response.keys():
+            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_img = response['Items'][0]['image']
+    curriculum_table.update_item(Key={'curriculum_id': inp_dict['curriculum_id']},
+                           UpdateExpression='set image = :c',
+                           ExpressionAttributeValues={
+                               ":c": inp_dict['new_image']
+                           })
+    out_dict = {}
+    out_dict['image'] = inp_dict['new_image']
+    out_dict['old_image'] = old_img
+    out_dict['curriculum_id'] = inp_dict['curriculum_id']
+    json.dump(out_dict, output_json)
+       
         
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -717,7 +796,10 @@ add_question_input = open('add_question_data.json')
 remove_question_input = open('remove_question_data.json')
 change_question_order_input = open('change_question_order_data.json')
 create_curriculum_input = open('create_curriculum_data.json')
-# print_table('Units')
+change_curriculum_name_input = open('change_curriculum_name_data.json')
+change_curriculum_description_input = open('change_curriculum_description_data.json')
+change_image_input = open('change_image_data.json')
+# print_table('Curriculums')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
@@ -740,6 +822,10 @@ create_curriculum_input = open('create_curriculum_data.json')
 # remove_question(remove_question_input, output_file)
 # change_question_order(change_question_order_input, output_file)
 # create_curriculum(create_curriculum_input, output_file)
+# get_all_curriculums(output_file)
+# change_curriculum_name(change_curriculum_name_input, output_file)
+# change_curriculum_description(change_curriculum_description_input, output_file)
+# change_image(change_image_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -763,3 +849,6 @@ add_question_input.close()
 remove_question_input.close()
 change_question_order_input.close()
 create_curriculum_input.close()
+change_curriculum_name_input.close()
+change_curriculum_description_input.close()
+change_image_input.close()
