@@ -1,9 +1,9 @@
 {
-    "quizzes": [
-        "34242",
-        "1111"
-    ],
-    "old_quizzes": [],
+    "changed_questions": [1],
     "unit_id": "0303818823",
-    "unit_number": 1
+    "removed_unit": {
+        "unit_name": "Unit 1",
+        "description": "Learn about arrays",
+        "quizzes": []
+    }
 }
