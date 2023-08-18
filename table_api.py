@@ -129,10 +129,9 @@ def remove_choice(input_json, output_json):
     curr_list = []
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     for item in response['Items']:
             for choice in item['choices']:
                 curr_list.append(choice)
@@ -160,10 +159,9 @@ def change_answer(input_json, output_json):
     key_exp &= Key('question_number').eq(inp_dict['question_number'])
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices,answer', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices,answer', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='choices,answer', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_answer = int(response['Items'][0]['answer'])
         
     if inp_dict['new_answer'] < 0 or inp_dict['new_answer'] >= len(response['Items'][0]['choices']):
@@ -219,10 +217,9 @@ def change_question(input_json, output_json):
     key_exp &= Key('question_number').eq(inp_dict['question_number'])
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='question', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_question = response['Items'][0]['question']
     quiz_table.update_item(Key={'quiz_id': inp_dict['quiz_id'], 'question_number': inp_dict['question_number']},
                            UpdateExpression='set question = :q',
@@ -292,10 +289,9 @@ def get_question(input_json, output_json):
     key_exp &= Key('question_number').eq(inp_dict['question_number'])
     response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,question_number,question,choices,quiz_name,answer', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,question,choices,quiz_name,answer', 
-                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = quiz_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,question,choices,quiz_name,answer', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     out_dict = response['Items'][0].copy()
     out_dict['quiz_id'] = inp_dict['quiz_id']
     out_dict['question_number'] = int(inp_dict['question_number'])
@@ -338,10 +334,9 @@ def change_url(input_json, output_json):
     key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
     response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_url = response['Items'][0]['interactive_url']
     interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
                            UpdateExpression='set interactive_url = :u',
@@ -360,9 +355,8 @@ def change_interactive_name(input_json, output_json):
     key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
     response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_name', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_name', 
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_name', 
                                 KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_name = response['Items'][0]['interactive_name']
     interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
@@ -382,10 +376,9 @@ def change_interactive_description(input_json, output_json):
     key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
     response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_description = response['Items'][0]['description']
     interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
                            UpdateExpression='set description = :u',
@@ -405,10 +398,9 @@ def change_interactive_json(input_file, new_json, output_json):
     new_json = json.load(new_json)
     response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='associated_data', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='associated_data', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='associated_data', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_data = response['Items'][0]['associated_data']
     interactive_table.update_item(Key={'interactive_id': inp_dict['interactive_id']},
                            UpdateExpression='set associated_data = :u',
@@ -427,9 +419,8 @@ def get_interactive(input_json, output_json):
     key_exp = Key('interactive_id').eq(inp_dict['interactive_id'])
     response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url,interactive_name,description,associated_data', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url,interactive_name,description,associated_data', 
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = interactive_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactive_url,interactive_name,description,associated_data', 
                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     json.dump(response['Items'][0], output_json)
     
@@ -712,10 +703,9 @@ def change_curriculum_name(input_json, output_json):
     key_exp = Key('curriculum_id').eq(inp_dict['curriculum_id'])
     response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='curriculum_name', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='curriculum_name', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='curriculum_name', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_name = response['Items'][0]['curriculum_name']
     curriculum_table.update_item(Key={'curriculum_id': inp_dict['curriculum_id']},
                            UpdateExpression='set curriculum_name = :c',
@@ -734,9 +724,8 @@ def change_curriculum_description(input_json, output_json):
     key_exp = Key('curriculum_id').eq(inp_dict['curriculum_id'])
     response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
                                 KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_desc = response['Items'][0]['description']
     curriculum_table.update_item(Key={'curriculum_id': inp_dict['curriculum_id']},
@@ -756,10 +745,9 @@ def change_image(input_json, output_json):
     key_exp = Key('curriculum_id').eq(inp_dict['curriculum_id'])
     response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image', 
-                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     old_img = response['Items'][0]['image']
     curriculum_table.update_item(Key={'curriculum_id': inp_dict['curriculum_id']},
                            UpdateExpression='set image = :c',
@@ -780,10 +768,9 @@ def get_curriculum(input_json, output_json):
     unit_exp = Key('unit_id').eq(inp_dict['curriculum_id'])
     response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image,description,curriculum_name', 
                                KeyConditionExpression=key_exp)
-    if not len(response['Items']) > 0:
-        while 'LastEvaluatedKey' in response.keys():
-            response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image,description,curriculum_name', 
-                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = curriculum_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='image,description,curriculum_name', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
     response = response['Items'][0]
     out_dict['image'] = response['image']
     out_dict['description'] = response['description']
@@ -799,6 +786,88 @@ def get_curriculum(input_json, output_json):
         for item in response['Items']:
             units.append(int(item['unit_number']))
     out_dict['units'] = units
+    json.dump(out_dict, output_json)
+    
+    
+def get_unit(input_json, output_json):
+    inp_dict = json.load(input_json)
+    out_dict = {}
+    key_exp = Key('unit_id').eq(inp_dict['unit_id'])
+    key_exp &= Key('unit_number').eq(inp_dict['unit_number'])
+    l_exp = Key('lesson_id').eq(inp_dict['unit_id'])
+    response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,unit_name,quizzes', 
+                               KeyConditionExpression=key_exp)
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,unit_name,quizzes', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    response = response['Items'][0]
+    out_dict['description'] = response['description']
+    out_dict['unit_name'] = response['unit_name']
+    out_dict['quizzes'] = response['quizzes']
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_number', 
+                               KeyConditionExpression=l_exp)
+    lessons = []
+    for item in response['Items']:
+        lessons.append(int(item['lesson_number']))
+    while 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_number', 
+                               KeyConditionExpression=l_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            lessons.append(int(item['unit_number']))
+    out_dict['lessons'] = lessons
+    json.dump(out_dict, output_json)
+    
+    
+def change_unit_description(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('unit_id').eq(inp_dict['unit_id'])
+    key_exp &= Key('unit_number').eq(inp_dict['unit_number'])
+    response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+                               KeyConditionExpression=key_exp)
+    while 'LastEvaluatedKey' in response.keys() and not len(response['Items']) > 0:
+        response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_description = response['Items'][0]['description']
+    unit_table.update_item(Key={'unit_id': inp_dict['unit_id'], 'unit_number': inp_dict['unit_number']},
+                           UpdateExpression='set description = :d',
+                           ExpressionAttributeValues={
+                               ":d": inp_dict['new_description']
+                           })
+    out_dict = {}
+    out_dict['description'] = inp_dict['new_description']
+    out_dict['old_description'] = old_description
+    out_dict['unit_id'] = inp_dict['unit_id']
+    out_dict['unit_number'] = inp_dict['unit_number']
+    json.dump(out_dict, output_json)
+    
+    
+def add_unit_quiz(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('unit_id').eq(inp_dict['unit_id'])
+    key_exp &= Key('unit_number').eq(inp_dict['unit_number'])
+    curr_list = []
+    response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='quizzes', 
+                               KeyConditionExpression=key_exp)
+    if not (len(response['Items']) > 0):
+        while 'LastEvaluatedKey' in response.keys():
+            response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='quizzes', 
+                                KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    for item in response['Items']:
+        for quiz in item['quizzes']:
+            curr_list.append(quiz)
+    old_list = curr_list.copy()
+    for choice in inp_dict['new_quizzes']:
+        curr_list.append(choice)
+    unit_table.update_item(Key={'unit_id': inp_dict['unit_id'], 'unit_number': inp_dict['unit_number']},
+                           UpdateExpression='set quizzes = :qs',
+                           ExpressionAttributeValues={
+                               ":qs": curr_list
+                           })
+    out_dict = {}
+    out_dict['quizzes'] = curr_list
+    out_dict['old_quizzes'] = old_list
+    out_dict['unit_id'] = inp_dict['unit_id']
+    out_dict['unit_number'] = inp_dict['unit_number']
     json.dump(out_dict, output_json)
     
         
@@ -829,7 +898,10 @@ change_curriculum_name_input = open('change_curriculum_name_data.json')
 change_curriculum_description_input = open('change_curriculum_description_data.json')
 change_image_input = open('change_image_data.json')
 get_curriculum_input = open('get_curriculum_data.json')
-# print_table('Curriculums')
+get_unit_input = open('get_unit_data.json')
+change_unit_description_input = open('change_unit_description_data.json')
+add_unit_quiz_input = open('add_unit_quiz_data.json')
+# print_table('Units')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
 # check_quiz(check_quiz_input, output_file)
@@ -856,7 +928,10 @@ get_curriculum_input = open('get_curriculum_data.json')
 # change_curriculum_name(change_curriculum_name_input, output_file)
 # change_curriculum_description(change_curriculum_description_input, output_file)
 # change_image(change_image_input, output_file)
-get_curriculum(get_curriculum_input, output_file)
+# get_curriculum(get_curriculum_input, output_file)
+# get_unit(get_unit_input, output_file)
+# change_unit_description(change_unit_description_input, output_file)
+add_unit_quiz(add_unit_quiz_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -884,3 +959,6 @@ change_curriculum_name_input.close()
 change_curriculum_description_input.close()
 change_image_input.close()
 get_curriculum_input.close()
+get_unit_input.close()
+change_unit_description_input.close()
+add_unit_quiz_input.close()

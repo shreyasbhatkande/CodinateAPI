@@ -1,9 +1,9 @@
 {
-    "image": "new image",
-    "description": "new description",
-    "curriculum_name": "new name",
-    "units": [
-        0,
-        1
-    ]
+    "quizzes": [
+        "34242",
+        "1111"
+    ],
+    "old_quizzes": [],
+    "unit_id": "0303818823",
+    "unit_number": 1
 }
