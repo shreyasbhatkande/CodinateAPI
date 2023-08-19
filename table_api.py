@@ -1527,6 +1527,7 @@ def change_lesson_order(input_json, output_json):
     out_dict['lesson_id'] = inp_dict['lesson_id']
     json.dump(out_dict, output_json)
         
+        
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
 check_quiz_input = open('check_quiz_data.json')
