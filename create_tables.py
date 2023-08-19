@@ -137,5 +137,5 @@ def delete_table():
     dynamodb.Table('Interactives').delete()
     dynamodb.Table('Curriculums').delete()
 
-# delete_table()
+delete_table()
 create_table()

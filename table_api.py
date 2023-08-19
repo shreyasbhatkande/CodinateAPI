@@ -1433,6 +1433,99 @@ def create_lesson(input_json, output_json):
     )
     out_dict['lesson_id'] = inp_dict['unit_id'] + '-' + str(inp_dict['unit_number'])
     json.dump(out_dict, output_json)
+    
+    
+def change_lesson_order(input_json, output_json):
+    inp_dict = json.load(input_json)
+    original_pos = inp_dict['lesson_number']
+    new_pos = inp_dict['new_pos']
+    if original_pos == new_pos:
+        raise Exception('Both positions given are the same')
+    k2 = Key('lesson_id').eq(inp_dict['lesson_id'])
+    k2 &= Key('lesson_number').eq(original_pos)
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                               KeyConditionExpression=k2)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                               KeyConditionExpression=k2, ExclusiveStartKey=response['LastEvaluatedKey'])
+    removed_lesson = response['Items'][0]
+    removed_lesson['lesson_id'] = inp_dict['lesson_id']
+    removed_lesson['lesson_number'] = new_pos
+    out_dict = {'changed_indexes': []}
+    lesson_table.delete_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': original_pos})
+    if original_pos > new_pos:
+        key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+        key_exp &= Key('lesson_number').between(new_pos, original_pos - 1)    
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives,lesson_number', 
+                               KeyConditionExpression=key_exp)
+        for item in reversed(response['Items']):
+            lesson_table.put_item(
+                Item={
+                    'lesson_id': inp_dict['lesson_id'],
+                    'lesson_desc': item['lesson_desc'],
+                    'lesson_number': int(item['lesson_number']) + 1,
+                    'video': item['video'],
+                    'lesson_name': item['lesson_name'],
+                    'quizzes': item['quizzes'],
+                    'interactives': item['interactives']
+                }
+            )
+            out_dict['changed_indexes'].append(int(item['lesson_number']))
+        while 'LastEvaluatedKey' in response.keys():
+            response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+            for item in reversed(response['Items']):
+                lesson_table.put_item(
+                    Item={
+                        'lesson_id': inp_dict['lesson_id'],
+                        'lesson_desc': item['lesson_desc'],
+                        'lesson_number': int(item['lesson_number']) + 1,
+                        'video': item['video'],
+                        'lesson_name': item['lesson_name'],
+                        'quizzes': item['quizzes'],
+                        'interactives': item['interactives']
+                    }
+                )
+            out_dict['changed_indexes'].append(int(item['lesson_number']))
+    else:
+        key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+        key_exp &= Key('lesson_number').between(original_pos + 1, new_pos)    
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives,lesson_number', 
+                               KeyConditionExpression=key_exp)
+        for item in reversed(response['Items']):
+            lesson_table.put_item(
+                Item={
+                    'lesson_id': inp_dict['lesson_id'],
+                    'lesson_desc': item['lesson_desc'],
+                    'lesson_number': int(item['lesson_number']) - 1,
+                    'video': item['video'],
+                    'lesson_name': item['lesson_name'],
+                    'quizzes': item['quizzes'],
+                    'interactives': item['interactives']
+                }
+            )
+            out_dict['changed_indexes'].append(int(item['lesson_number']))
+        while 'LastEvaluatedKey' in response.keys():
+            response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+            for item in reversed(response['Items']):
+                lesson_table.put_item(
+                    Item={
+                        'lesson_id': inp_dict['lesson_id'],
+                        'lesson_desc': item['lesson_desc'],
+                        'lesson_number': int(item['lesson_number']) - 1,
+                        'video': item['video'],
+                        'lesson_name': item['lesson_name'],
+                        'quizzes': item['quizzes'],
+                        'interactives': item['interactives']
+                    }
+                )
+            out_dict['changed_indexes'].append(int(item['lesson_number']))
+    lesson_table.put_item(
+        Item=removed_lesson
+    )    
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    json.dump(out_dict, output_json)
         
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -1479,6 +1572,7 @@ remove_lesson_interactive_input = open('remove_lesson_interactive_data.json')
 change_video_input = open('change_video_data.json')
 delete_lesson_input = open('delete_lesson_data.json')
 create_lesson_input = open('create_lesson_data.json')
+change_lesson_order_input = open('change_lesson_order_data.json')
 # print_table('Units')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -1525,7 +1619,8 @@ create_lesson_input = open('create_lesson_data.json')
 # remove_lesson_interactive(remove_lesson_interactive_input, output_file)
 # change_video(change_video_input, output_file)
 # remove_lesson(delete_lesson_input, output_file)
-create_lesson(create_lesson_input, output_file)
+# create_lesson(create_lesson_input, output_file)
+# change_lesson_order(change_lesson_order_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -1571,3 +1666,4 @@ remove_lesson_interactive_input.close()
 change_video_input.close()
 delete_lesson_input.close()
 create_lesson_input.close()
+change_lesson_order_input.close()
