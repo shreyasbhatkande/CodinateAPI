@@ -1298,6 +1298,29 @@ def remove_lesson_interactive(input_json, output_json):
     out_dict['lesson_id'] = inp_dict['lesson_id']
     out_dict['lesson_number'] = inp_dict['lesson_number']
     json.dump(out_dict, output_json)
+    
+
+def change_video(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='video', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='video', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_video = response['Items'][0]['video']
+    lesson_table.update_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']},
+                           UpdateExpression='set video = :d',
+                           ExpressionAttributeValues={
+                               ":d": inp_dict['new_video']
+                           })
+    out_dict = {}
+    out_dict['video'] = inp_dict['new_video']
+    out_dict['old_video'] = old_video
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['lesson_number'] = inp_dict['lesson_number']
+    json.dump(out_dict, output_json)
         
         
 output_file = open('out.json', 'w')
@@ -1342,6 +1365,7 @@ add_lesson_quiz_input = open('add_lesson_quiz_data.json')
 add_lesson_interactive_input = open('add_lesson_interactive_data.json')
 remove_lesson_quiz_input = open('remove_lesson_quiz_data.json')
 remove_lesson_interactive_input = open('remove_lesson_interactive_data.json')
+change_video_input = open('change_video_data.json')
 # print_table('Units')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -1385,7 +1409,8 @@ remove_lesson_interactive_input = open('remove_lesson_interactive_data.json')
 # add_lesson_quiz(add_lesson_quiz_input, output_file)
 # add_lesson_interactive(add_lesson_interactive_input, output_file)
 # remove_lesson_quiz(remove_lesson_quiz_input, output_file)
-remove_lesson_interactive(remove_lesson_interactive_input, output_file)
+# remove_lesson_interactive(remove_lesson_interactive_input, output_file)
+change_video(change_video_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -1428,3 +1453,4 @@ add_lesson_quiz_input.close()
 add_lesson_interactive_input.close()
 remove_lesson_quiz_input.close()
 remove_lesson_interactive_input.close()
+change_video_input.close()
