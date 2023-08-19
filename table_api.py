@@ -660,10 +660,10 @@ def create_curriculum(input_json, output_json):
             unit_name_id[lesson["unit"]]['id'] = curriculum_id
         unit_name_id[lesson['unit']]['description'] = lesson['unit_description']
         unit_name_id[lesson['unit']]['unit_num'] = lesson['unitOrderNum']
-        out_dict['lesson_pairings'][lesson['name']] = unit_name_id[lesson['unit']]['id']
+        out_dict['lesson_pairings'][lesson['name']] = unit_name_id[lesson['unit']]['id'] + "-" + str(lesson['unitOrderNum'])
         lesson_table.put_item(
             Item={
-                'lesson_id': curriculum_id,
+                'lesson_id': curriculum_id + "-" + str(lesson['unitOrderNum']),
                 'lesson_number': lesson['lessonOrderNum'],
                 'video': lesson['videoLink'],
                 'lesson_name': lesson['name'],
@@ -795,7 +795,8 @@ def get_unit(input_json, output_json):
     out_dict = {}
     key_exp = Key('unit_id').eq(inp_dict['unit_id'])
     key_exp &= Key('unit_number').eq(inp_dict['unit_number'])
-    l_exp = Key('lesson_id').eq(inp_dict['unit_id'])
+    l_exp = Key('lesson_id').eq(inp_dict['unit_id'] + '-' + str(inp_dict['unit_number']))
+    out_dict['lesson_id'] = inp_dict['unit_id'] + '-' + str(inp_dict['unit_number'])
     response = unit_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='description,unit_name,quizzes', 
                                KeyConditionExpression=key_exp)
     while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
@@ -1109,6 +1110,195 @@ def change_unit_order(input_json, output_json):
     out_dict['unit_id'] = inp_dict['unit_id']
     json.dump(out_dict, output_json)
     
+    
+def get_all_lessons(output_json):
+    response = db_client.scan(TableName='Lessons', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='lesson_name,lesson_id,lesson_number')
+    out_dict = {}
+    for r in response['Items']:
+        out_dict[r['lesson_name']['S']] = r['lesson_id']['S']
+    while 'LastEvaluatedKey' in response.keys():
+        response = db_client.scan(TableName='Lessons', Select='SPECIFIC_ATTRIBUTES', ProjectionExpression='lesson_name,lesson_id,lesson_number', 
+                                  ExclusiveStartKey=response['LastEvaluatedKey'])
+        for r in response['Items']:
+            out_dict[r['lesson_name']['S']] = r['lesson_id']['S']
+    json.dump(out_dict, fp=output_json)
+    
+    
+def get_lesson(input_json, output_json):
+    inp_dict = json.load(input_json)
+    out_dict = {}
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    out_dict = response['Items'][0]
+    json.dump(out_dict, output_json)
+    
+    
+def change_lesson_description(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_description = response['Items'][0]['lesson_desc']
+    lesson_table.update_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']},
+                           UpdateExpression='set lesson_desc = :d',
+                           ExpressionAttributeValues={
+                               ":d": inp_dict['new_description']
+                           })
+    out_dict = {}
+    out_dict['description'] = inp_dict['new_description']
+    out_dict['old_description'] = old_description
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['lesson_number'] = inp_dict['lesson_number']
+    json.dump(out_dict, output_json)
+    
+    
+def change_lesson_name(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_name', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_name', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    old_name = response['Items'][0]['lesson_name']
+    lesson_table.update_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']},
+                           UpdateExpression='set lesson_name = :d',
+                           ExpressionAttributeValues={
+                               ":d": inp_dict['new_name']
+                           })
+    out_dict = {}
+    out_dict['name'] = inp_dict['new_name']
+    out_dict['old_name'] = old_name
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['lesson_number'] = inp_dict['lesson_number']
+    json.dump(out_dict, output_json)
+    
+        
+def add_lesson_quiz(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    curr_list = []
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='quizzes', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='quizzes', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    for item in response['Items']:
+        for quiz in item['quizzes']:
+            curr_list.append(quiz)
+    old_list = curr_list.copy()
+    for choice in inp_dict['new_quizzes']:
+        curr_list.append(choice)
+    lesson_table.update_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']},
+                           UpdateExpression='set quizzes = :qs',
+                           ExpressionAttributeValues={
+                               ":qs": curr_list
+                           })
+    out_dict = {}
+    out_dict['quizzes'] = curr_list
+    out_dict['old_quizzes'] = old_list
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['lesson_number'] = inp_dict['lesson_number']
+    json.dump(out_dict, output_json)
+        
+        
+def add_lesson_interactive(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    curr_list = []
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactives', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactives', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    for item in response['Items']:
+        for quiz in item['interactives']:
+            curr_list.append(quiz)
+    old_list = curr_list.copy()
+    for choice in inp_dict['new_interactives']:
+        curr_list.append(choice)
+    lesson_table.update_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']},
+                           UpdateExpression='set interactives = :qs',
+                           ExpressionAttributeValues={
+                               ":qs": curr_list
+                           })
+    out_dict = {}
+    out_dict['interactives'] = curr_list
+    out_dict['old_interactives'] = old_list
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['lesson_number'] = inp_dict['lesson_number']
+    json.dump(out_dict, output_json)
+    
+    
+def remove_lesson_quiz(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    curr_list = []
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='quizzes', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='quizzes', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    for item in response['Items']:
+        for quiz in item['quizzes']:
+            curr_list.append(quiz)
+    old_list = curr_list.copy()
+    for choice in inp_dict['remove']:
+        curr_list.remove(choice)
+    lesson_table.update_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']},
+                           UpdateExpression='set quizzes = :qs',
+                           ExpressionAttributeValues={
+                               ":qs": curr_list
+                           })
+    out_dict = {}
+    out_dict['quizzes'] = curr_list
+    out_dict['old_quizzes'] = old_list
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['lesson_number'] = inp_dict['lesson_number']
+    json.dump(out_dict, output_json)
+    
+    
+def remove_lesson_interactive(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    curr_list = []
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactives', 
+                               KeyConditionExpression=key_exp)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='interactives', 
+                            KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+    for item in response['Items']:
+        for quiz in item['interactives']:
+            curr_list.append(quiz)
+    old_list = curr_list.copy()
+    for choice in inp_dict['remove']:
+        curr_list.remove(choice)
+    lesson_table.update_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']},
+                           UpdateExpression='set interactives = :qs',
+                           ExpressionAttributeValues={
+                               ":qs": curr_list
+                           })
+    out_dict = {}
+    out_dict['interactives'] = curr_list
+    out_dict['old_interactives'] = old_list
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['lesson_number'] = inp_dict['lesson_number']
+    json.dump(out_dict, output_json)
+        
         
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -1145,6 +1335,13 @@ change_unit_name_input = open('change_unit_name_data.json')
 delete_unit_input = open('delete_unit_data.json')
 create_unit_input = open('create_unit_data.json')
 change_unit_order_input = open('change_unit_order_data.json')
+get_lesson_input = open('get_lesson_data.json')
+change_lesson_description_input = open('change_lesson_description_data.json')
+change_lesson_name_input = open('change_lesson_name_data.json')
+add_lesson_quiz_input = open('add_lesson_quiz_data.json')
+add_lesson_interactive_input = open('add_lesson_interactive_data.json')
+remove_lesson_quiz_input = open('remove_lesson_quiz_data.json')
+remove_lesson_interactive_input = open('remove_lesson_interactive_data.json')
 # print_table('Units')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -1181,6 +1378,14 @@ change_unit_order_input = open('change_unit_order_data.json')
 # remove_unit(delete_unit_input, output_file)
 # create_unit(create_unit_input, output_file)
 # change_unit_order(change_unit_order_input, output_file)
+# get_all_lessons(output_file)
+# get_lesson(get_lesson_input, output_file)
+# change_lesson_description(change_lesson_description_input, output_file)
+# change_lesson_name(change_lesson_name_input, output_file)
+# add_lesson_quiz(add_lesson_quiz_input, output_file)
+# add_lesson_interactive(add_lesson_interactive_input, output_file)
+# remove_lesson_quiz(remove_lesson_quiz_input, output_file)
+remove_lesson_interactive(remove_lesson_interactive_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -1216,3 +1421,10 @@ change_unit_name_input.close()
 delete_unit_input.close()
 create_unit_input.close()
 change_unit_order_input.close()
+get_lesson_input.close()
+change_lesson_description_input.close()
+change_lesson_name_input.close()
+add_lesson_quiz_input.close()
+add_lesson_interactive_input.close()
+remove_lesson_quiz_input.close()
+remove_lesson_interactive_input.close()
