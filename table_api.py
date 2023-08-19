@@ -1321,7 +1321,118 @@ def change_video(input_json, output_json):
     out_dict['lesson_id'] = inp_dict['lesson_id']
     out_dict['lesson_number'] = inp_dict['lesson_number']
     json.dump(out_dict, output_json)
-        
+    
+
+def remove_lesson(input_json, output_json):
+    inp_dict = json.load(input_json)
+    key_exp = Key('lesson_id').eq(inp_dict['lesson_id'])
+    key_exp &= Key('lesson_number').gt(inp_dict['lesson_number'])
+    k2 = Key('lesson_id').eq(inp_dict['lesson_id'])
+    k2 &= Key('lesson_number').eq(inp_dict['lesson_number'])
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                               KeyConditionExpression=k2)
+    while not len(response['Items']) > 0 and 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives', 
+                               KeyConditionExpression=k2,  ExclusiveStartKey=response['LastEvaluatedKey'])
+    removed_lesson = response['Items'][0]
+    lesson_table.delete_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': inp_dict['lesson_number']})
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives,lesson_number', 
+                               KeyConditionExpression=key_exp)
+    out_dict = {'changed_lessons':[]}
+    for item in response['Items']:
+        lesson_table.put_item(
+        Item={
+            'lesson_id': inp_dict['lesson_id'],
+            'lesson_desc': item['lesson_desc'],
+            'lesson_number': int(item['lesson_number']) - 1,
+            'video': item['video'],
+            'lesson_name': item['lesson_name'],
+            'quizzes': item['quizzes'],
+            'interactives': item['interactives']
+            }
+        )
+        out_dict['changed_lessons'].append(int(item['lesson_number']))
+        lesson_table.delete_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': item['lesson_number']})
+    while 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives,lesson_number', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in response['Items']:
+            lesson_table.put_item(
+            Item={
+                'lesson_id': inp_dict['lesson_id'],
+                'lesson_desc': item['lesson_desc'],
+                'lesson_number': int(item['lesson_number']) - 1,
+                'video': item['video'],
+                'lesson_name': item['lesson_name'],
+                'quizzes': item['quizzes'],
+                'interactives': item['interactives']
+                }
+            )
+            out_dict['changed_lessons'].append(int(item['lesson_number']))
+            lesson_table.delete_item(Key={'lesson_id': inp_dict['lesson_id'], 'lesson_number': item['lesson_number']})
+    out_dict['lesson_id'] = inp_dict['lesson_id']
+    out_dict['removed_lesson'] = removed_lesson
+    json.dump(out_dict, output_json)
+    
+    
+def create_lesson(input_json, output_json):
+    inp_dict = json.load(input_json)
+    start_index = inp_dict['lesson_number']
+    if start_index != 0:
+        start_index -= 1
+    key_exp = Key('lesson_id').eq(inp_dict['unit_id'] + '-' + str(inp_dict['unit_number']))
+    key_exp &= Key('lesson_number').gte(start_index)
+    response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives,lesson_number', 
+                               KeyConditionExpression=key_exp)
+    out_dict = {'changed_lessons': []}
+    for item in reversed(response['Items']):
+        if int(item['lesson_number']) < inp_dict['lesson_number']:
+            continue
+        lesson_table.put_item(
+        Item={
+                'lesson_id': inp_dict['unit_id'] + '-' + str(inp_dict['unit_number']),
+                'lesson_desc': item['lesson_desc'],
+                'lesson_number': int(item['lesson_number']) + 1,
+                'video': item['video'],
+                'lesson_name': item['lesson_name'],
+                'quizzes': item['quizzes'],
+                'interactives': item['interactives']
+        }
+        )
+        out_dict['changed_lessons'].append(int(item['lesson_number']))
+        lesson_table.delete_item(Key={'lesson_id': inp_dict['unit_id'] + '-' + str(inp_dict['unit_number']), 'lesson_number': item['lesson_number']})
+    while 'LastEvaluatedKey' in response.keys():
+        response = lesson_table.query(Select="SPECIFIC_ATTRIBUTES", ProjectionExpression='lesson_desc,video,lesson_name,quizzes,interactives,lesson_number', 
+                               KeyConditionExpression=key_exp, ExclusiveStartKey=response['LastEvaluatedKey'])
+        for item in reversed(response['Items']):
+            if int(item['lesson_number']) < inp_dict['lesson_number']:
+                continue
+            lesson_table.put_item(
+            Item={
+                    'lesson_id': inp_dict['unit_id'] + '-' + str(inp_dict['unit_number']),
+                    'lesson_desc': item['lesson_desc'],
+                    'lesson_number': int(item['lesson_number']) + 1,
+                    'video': item['video'],
+                    'lesson_name': item['lesson_name'],
+                    'quizzes': item['quizzes'],
+                    'interactives': item['interactives']
+            }
+            )
+            out_dict['changed_lessons'].append(int(item['lesson_number']))
+            lesson_table.delete_item(Key={'lesson_id': inp_dict['unit_id'] + '-' + str(inp_dict['unit_number']), 'lesson_number': item['lesson_number']})
+    lesson_table.put_item(
+        Item={
+            'lesson_id': inp_dict['unit_id'] + '-' + str(inp_dict['unit_number']),
+            'lesson_number': inp_dict['lesson_number'],
+            'lesson_desc': inp_dict['lesson_desc'],
+            'video': inp_dict['video'],
+            'lesson_name': inp_dict['lesson_name'],
+            'quizzes': inp_dict['quizzes'],
+            'interactives': inp_dict['interactives']
+        }   
+    )
+    out_dict['lesson_id'] = inp_dict['unit_id'] + '-' + str(inp_dict['unit_number'])
+    json.dump(out_dict, output_json)
         
 output_file = open('out.json', 'w')
 add_quiz_input = open('add_quiz_data.json')
@@ -1366,6 +1477,8 @@ add_lesson_interactive_input = open('add_lesson_interactive_data.json')
 remove_lesson_quiz_input = open('remove_lesson_quiz_data.json')
 remove_lesson_interactive_input = open('remove_lesson_interactive_data.json')
 change_video_input = open('change_video_data.json')
+delete_lesson_input = open('delete_lesson_data.json')
+create_lesson_input = open('create_lesson_data.json')
 # print_table('Units')
 # create_new_quiz(add_quiz_input, output_file)
 # get_quizzes(output_file)
@@ -1410,7 +1523,9 @@ change_video_input = open('change_video_data.json')
 # add_lesson_interactive(add_lesson_interactive_input, output_file)
 # remove_lesson_quiz(remove_lesson_quiz_input, output_file)
 # remove_lesson_interactive(remove_lesson_interactive_input, output_file)
-change_video(change_video_input, output_file)
+# change_video(change_video_input, output_file)
+# remove_lesson(delete_lesson_input, output_file)
+create_lesson(create_lesson_input, output_file)
 output_file.close()
 add_quiz_input.close()
 check_quiz_input.close()
@@ -1454,3 +1569,5 @@ add_lesson_interactive_input.close()
 remove_lesson_quiz_input.close()
 remove_lesson_interactive_input.close()
 change_video_input.close()
+delete_lesson_input.close()
+create_lesson_input.close()
